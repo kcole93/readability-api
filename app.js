@@ -4,7 +4,7 @@ const { Readability } = require('readability');
 const { JSDOM } = require('jsdom');
 require('dotenv').config();
 
-// Set API_KEY from Environment Variable
+// This should match the API_KEY environment variable in your .ENV file
 const apiKey = process.env.API_KEY;
 
 
@@ -20,10 +20,21 @@ function checkAuthorizationHeader(req, res, next) {
     return res.status(401).json({ error: 'Authorization header missing' });
   }
 
-  const [prefix, token] = authHeader.split(' ');
+  const parts = authHeader.split(' ');
+
+  // Check if the Authorization header is correctly formatted as "Bearer [token]"
+  if (parts.length !== 2) {
+    return res.status(401).json({ error: 'Invalid authorization header format. Expected format: Bearer [token]' });
+  }
+
+  const [prefix, token] = parts;
 
   if (prefix.toLowerCase() !== 'bearer') {
-    return res.status(401).json({ error: 'Invalid authorization prefix' });
+    return res.status(401).json({ error: 'Invalid authorization prefix. Expected "Bearer"' });
+  }
+
+  if (!token) {
+    return res.status(401).json({ error: 'Authorization token missing' });
   }
 
   // Attach the token to the request for use in route handlers
