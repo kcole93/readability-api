@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit'); // For handling Rate Limiting
 const axios = require('axios'); // For making HTTP requests
 const { Readability } = require('readability');
 const { JSDOM } = require('jsdom');
@@ -7,6 +8,16 @@ require('dotenv').config();
 // This should match the API_KEY environment variable in your .ENV file
 const apiKey = process.env.API_KEY;
 
+// Set rate limit from an environment variable with a default fallback
+const apiRequestLimit = process.env.API_REQUEST_LIMIT || 100; // requests
+const rateLimitWindowMs = process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000; // 15 minutes in milliseconds
+
+const limiter = rateLimit({
+  windowMs: rateLimitWindowMs, // Time window in milliseconds
+  max: apiRequestLimit, // Limit each IP to X requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
 const app = express();
 const port = 3000; // This should match the EXPOSED port in your Dockerfile
@@ -44,7 +55,7 @@ function checkAuthorizationHeader(req, res, next) {
   next();
 }
 
-app.use('/parse-url', checkAuthorizationHeader);
+app.use('/parse-url', limiter, checkAuthorizationHeader);
 app.post('/parse-url', async (req, res) => {
   // Check if the API key is valid
   if (req.token != apiKey) {
